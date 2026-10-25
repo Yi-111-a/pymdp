@@ -50,6 +50,36 @@ class TestGraphEnvBatchLocations(unittest.TestCase):
                 batch_size=3,
             )
 
+    def test_single_list_must_match_batch_size(self):
+        env, graph = _env()
+        key = jr.PRNGKey(0)
+        with self.assertRaisesRegex(ValueError, "object_locations must have length batch_size"):
+            env.generate_env_params(graph, key=key, object_locations=[1], batch_size=4)
+        with self.assertRaisesRegex(ValueError, "object_locations must have length batch_size"):
+            env.generate_env_params(graph, key=key, object_locations=[1, 2], batch_size=4)
+        with self.assertRaisesRegex(ValueError, "agent_locations must have length batch_size"):
+            env.generate_env_params(graph, key=key, agent_locations=[0, 1], batch_size=4)
+
+    def test_out_of_range_locations_raise(self):
+        env, graph = _env()
+        with self.assertRaisesRegex(ValueError, "agent_locations values"):
+            env.generate_env_params(graph, object_locations=[0, 1], agent_locations=[0, 7])
+        with self.assertRaisesRegex(ValueError, "agent_locations values"):
+            env.generate_env_params(graph, object_locations=[0, 1], agent_locations=[-1, 0])
+        with self.assertRaisesRegex(ValueError, "agent_locations values"):
+            env.generate_env_params(graph, object_locations=[0, 1], agent_locations=[0, 3])
+        with self.assertRaisesRegex(ValueError, "object_locations values"):
+            env.generate_env_params(graph, object_locations=[0, 4], agent_locations=[0, 1])
+
+    def test_single_list_with_batch_size_samples_the_other(self):
+        env, graph = _env()
+        params = env.generate_env_params(
+            graph, key=jr.PRNGKey(0), object_locations=[3, 0], batch_size=2
+        )
+        self.assertEqual(float(params["D"][1][0, 3]), 1.0)
+        self.assertEqual(float(params["D"][1][1, 0]), 1.0)
+        self.assertTrue(bool(jnp.allclose(params["D"][0].sum(axis=-1), 1.0)))
+
     def test_matching_lists_set_batched_priors(self):
         env, graph = _env()
         params = env.generate_env_params(
