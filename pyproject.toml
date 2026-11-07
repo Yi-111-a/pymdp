@@ -129,7 +129,6 @@ markers = [
 source = ["pymdp"]
 omit = [
     "*/test/*",
-    "pymdp/legacy/*",
 ]
 
 [tool.coverage.report]
